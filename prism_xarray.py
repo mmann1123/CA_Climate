@@ -13,7 +13,9 @@ from xclim.testing import open_dataset
 
 #%% Get all tmax data
 
-files = r"/mnt/space/Dropbox/USA_Data/Daily_rasters_temp_maxmin/Maximum_temperature"
+files = (
+    r"/mnt/space/Dropbox/USA_Data/prism/Daily_rasters_temp_maxmin/Maximum_temperature"
+)
 band_name = "ppt"
 file_glob = f"{files}/**/*_bil.bil"
 strp_glob = f"PRISM_tmax_stable_4kmD2_%Y%m%d_bil.bil"
@@ -43,12 +45,10 @@ print(ds)
 gdd = xclim.atmos.growing_degree_days(tas=ds.tmp, thresh="10.0 degC", freq="YS")
 
 # %%
-import matplotlib.pyplot as plt
-
-plt.plot(gdd.sel(time="1981-01-01").values)
-plt.show()
+gdd.sel(time="1981-01-01").plot()
 
 
+############################################################
 # %% env pygisbookgw
 
 import geowombat as gw
@@ -77,8 +77,8 @@ dates = sorted(
     datetime.strptime(os.path.basename(string), strp_glob) for string in f_list
 )
 
-f_list = f_list[: 365 * 5]
-dates = dates[: 365 * 5]
+f_list = f_list[: 365 * 1]
+dates = dates[: 365 * 1]
 
 #%%
 
@@ -94,20 +94,20 @@ with gw.config.update(ref_bounds=bounds):
         time_names=dates,
         band_names=["tmx"],
         nodata=-9999,
-        num_workers=2,
+        num_workers=3,
     ) as src:
         print(src)
         ds = src.to_dataset("band")
         ds.tmx.attrs = {"units": "degC"}
-        gdd = xclim.atmos.growing_degree_days(tas=ds.tmx, thresh="10.0 degC", freq="YS")
-        gdd.compute()
+        ds.to_netcdf("~/Desktop/test.nc")
+
+
+#%%
+ds = xr.open_dataset("~/Desktop/test.nc")
+gdd = xclim.atmos.growing_degree_days(tas=ds.tmx, thresh="10.0 degC", freq="YS")
+gdd
 
 
 # %%
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(dpi=200)
-plt.plot(gdd.sel(time="1981-01-01").values)
-plt.show()
-
+gdd.sel(time="1981-01-01").plot()
 # %%
