@@ -15,6 +15,43 @@ import rioxarray  # for writing out xarray to tif
 #%%
 # example = open_dataset("ERA5/daily_surface_cancities_1990-1993.nc")
 
+
+#%% Get all tmax data
+mxtmp_path = (
+    r"/mnt/space/Dropbox/USA_Data/prism/Daily_rasters_temp_maxmin/Maximum_temperature"
+)
+band_name = "mxtmp"
+file_glob = f"{mxtmp_path}/**/*_bil.bil"
+strp_glob = f"PRISM_tmax_stable_4kmD2_%Y%m%d_bil.bil"
+
+mxtmp_f_list = sorted(glob(file_glob, recursive=True))
+mxtmp_dates = sorted(
+    datetime.strptime(os.path.basename(string), strp_glob) for string in mxtmp_f_list
+)
+
+gdd_out_path = r"/mnt/space/Dropbox/USA_Data/prism/xclim_indicators/growing_degree_days"
+
+#%% Min temp data
+
+mntmp_path = (
+    r"/mnt/space/Dropbox/USA_Data/prism/Daily_rasters_temp_maxmin/Minimum_temperature"
+)
+
+band_name = "mntmp"
+file_glob = f"{mntmp_path}/**/*_bil.bil"
+strp_glob = f"PRISM_tmin_stable_4kmD2_%Y%m%d_bil.bil"
+
+mntmp_f_list = sorted(glob(file_glob, recursive=True))
+mntmp_dates = sorted(
+    datetime.strptime(os.path.basename(string), strp_glob) for string in mntmp_f_list
+)
+
+hwf_out_path = r"/mnt/space/Dropbox/USA_Data/prism/xclim_indicators/heat_wave_frequency"
+
+csf_out_path = (
+    r"/mnt/space/Dropbox/USA_Data/prism/xclim_indicators/cold_spell_frequency"
+)
+
 ################################################
 # Load in and concatenate all individual GeoTIFFs
 # Subset by coorindates
@@ -91,29 +128,37 @@ for year in range(1981, 2020):
 
     #############################################
     # add average temp
-    ds["tmean"] = ds.tmin / ds.tmax
+    ds["tmean"] = (ds.tmin + ds.tmax) / 2
     ds.tmean.attrs = {"units": "degC"}
 
     #############################################
     # calculate metrics
-    hwf = xclim.atmos.heat_wave_frequency(
-        tasmin=ds.tmin, tasmax=ds.tmax, window=3, freq="YS"
+    # hwf = xclim.atmos.heat_wave_frequency(
+    #     tasmin=ds.tmin, tasmax=ds.tmax, window=3, freq="YS"
+    # )
+    # print(hwf)
+    # # hwf.to_netcdf(os.path.join(hwf_out_path, "HWF_" + str(year) + ".nc"))
+    # hwf.rio.write_crs("epsg:4326", inplace=True)
+    # hwf.sel(band=1).rio.to_raster(
+    #     os.path.join(hwf_out_path, "HWF_" + str(year) + ".tif")
+    # )
+
+    # gdd = xclim.atmos.growing_degree_days(tas=ds.tmean, thresh="4.0 degC", freq="YS")
+    # print(gdd)
+    # gdd.rio.write_crs("epsg:4326", inplace=True)
+    # gdd.sel(band=1).rio.to_raster(
+    #     os.path.join(gdd_out_path, "GDD_" + str(year) + ".tif")
+    # )
+
+    csf = xclim.atmos.cold_spell_frequency(
+        tas=ds.tmean, thresh="-10 degC", window=5, freq="YS"
     )
-    print(hwf)
+    print(csf)
     # hwf.to_netcdf(os.path.join(hwf_out_path, "HWF_" + str(year) + ".nc"))
-    hwf.rio.write_crs("epsg:4326", inplace=True)
-    hwf.sel(band=1).rio.to_raster(
-        os.path.join(hwf_out_path, "HWF_" + str(year) + ".tif")
+    csf.rio.write_crs("epsg:4326", inplace=True)
+    csf.sel(band=1).rio.to_raster(
+        os.path.join(csf_out_path, "CSF_" + str(year) + ".tif")
     )
-
-    gdd = xclim.atmos.growing_degree_days(tas=ds.tmean, thresh="4.0 degC", freq="YS")
-    print(gdd)
-    gdd.rio.write_crs("epsg:4326", inplace=True)
-    gdd.sel(band=1).rio.to_raster(
-        os.path.join(gdd_out_path, "GDD_" + str(year) + ".tif")
-    )
-
-
 #%%
 ############################################################
 # # %% env pygisbookgw
@@ -180,39 +225,6 @@ for year in range(1981, 2020):
 # # %%
 
 # %%
-#%% Get all tmax data
-mxtmp_path = (
-    r"/mnt/space/Dropbox/USA_Data/prism/Daily_rasters_temp_maxmin/Maximum_temperature"
-)
-band_name = "mxtmp"
-file_glob = f"{mxtmp_path}/**/*_bil.bil"
-strp_glob = f"PRISM_tmax_stable_4kmD2_%Y%m%d_bil.bil"
-
-mxtmp_f_list = sorted(glob(file_glob, recursive=True))
-mxtmp_dates = sorted(
-    datetime.strptime(os.path.basename(string), strp_glob) for string in mxtmp_f_list
-)
-
-gdd_out_path = r"/mnt/space/Dropbox/USA_Data/prism/xclim_indicators/growing_degree_days"
-
-#%% Min temp data
-
-mntmp_path = (
-    r"/mnt/space/Dropbox/USA_Data/prism/Daily_rasters_temp_maxmin/Minimum_temperature"
-)
-
-band_name = "mntmp"
-file_glob = f"{mntmp_path}/**/*_bil.bil"
-strp_glob = f"PRISM_tmin_stable_4kmD2_%Y%m%d_bil.bil"
-
-mntmp_f_list = sorted(glob(file_glob, recursive=True))
-mntmp_dates = sorted(
-    datetime.strptime(os.path.basename(string), strp_glob) for string in mntmp_f_list
-)
-
-hwf_out_path = r"/mnt/space/Dropbox/USA_Data/prism/xclim_indicators/heat_wave_frequency"
-
-
 # f_list = f_list[: 365 * 10]
 # dates = dates[: 365 * 10]
 
